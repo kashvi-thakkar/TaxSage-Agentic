@@ -10,6 +10,8 @@ const caAuthRoutes = require('./routes/ca.auth.routes.js');
 const caRoutes = require('./routes/ca.routes.js');
 const taxRoutes = require('./routes/tax.routes.js');
 const aiRoutes = require('./routes/ai.routes.js');
+const googleDriveRoutes = require("./routes/googleDrive.routes");
+
 
 // Load environment variables from .env file
 dotenv.config();
@@ -91,6 +93,7 @@ app.use('/api/ca/auth', caAuthRoutes);
 app.use('/api/ca', caRoutes);
 app.use('/api/tax', taxRoutes);
 app.use('/api/ai', aiRoutes);
+app.use( "/api/google-drive", googleDriveRoutes);
 
 // --- Basic Route ---
 app.get('/', (req, res) => {

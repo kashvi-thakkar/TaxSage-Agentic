@@ -5,6 +5,8 @@ import { useData } from '../../context/DataContext.jsx';
 import { encryptData } from '../../utils/encryption';
 import { ITR_API_CONFIG } from '../../config/apiConfig';
 import { validateITRData } from '../../utils/itrValidation';
+import GoogleDrivePicker from '../../components/GoogleDrivePicker.jsx';
+import axios from "axios";
 
 // Icon Components
 const MoneyIcon = () => (
@@ -641,204 +643,211 @@ const TaxFilingPage = () => {
   // ============ END E-FILING API INTEGRATION ============
 
   const handleFileUpload = async (event) => {
-  const file = event.target.files[0];
+    const file = event.target.files[0];
 
-  if (!file) {
-    alert("Please select a file to upload");
-    return;
-  }
-
-  // Validate file type
-  const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-  if (!validTypes.includes(file.type)) {
-    alert("Please upload a PDF, JPG, or PNG file");
-    return;
-  }
-
-  // Validate file size (10MB max)
-  if (file.size > 10 * 1024 * 1024) {
-    alert("File size must be less than 10MB");
-    return;
-  }
-
-  try {
-    setIsUploading(true);
-
-    const formData = new FormData();
-    formData.append("form16", file);
-
-    const token = localStorage.getItem("token");
-    
-    if (!token) {
-      throw new Error("No authentication token found. Please login again.");
+    if (!file) {
+      alert("Please select a file to upload");
+      return;
     }
 
-    console.log("Uploading file:", file.name, "Size:", file.size);
-
-    const response = await fetch("http://localhost:5001/api/tax/process-filing", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`
-      },
-      body: formData
-    });
-
-    // Check if response is JSON
-    const contentType = response.headers.get('content-type');
-    let extracted;
-    let result;
-    
-    if (contentType && contentType.includes('application/json')) {
-      result = await response.json();
-      extracted = result.filingData;
-    } else {
-      const text = await response.text();
-      console.error('Non-JSON response:', text.substring(0, 200));
-      throw new Error('Server returned invalid response format');
+    // Validate file type
+    const validTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+    if (!validTypes.includes(file.type)) {
+      alert("Please upload a PDF, JPG, or PNG file");
+      return;
     }
 
-    if (!response.ok) {
-      throw new Error(result?.message || result?.error || `Server error: ${response.status}`);
+    // Validate file size (10MB max)
+    if (file.size > 10 * 1024 * 1024) {
+      alert("File size must be less than 10MB");
+      return;
     }
+
+    try {
+      setIsUploading(true);
+
+      const formData = new FormData();
+      formData.append("form16", file);
+
+      const token = localStorage.getItem("token");
+      
+      if (!token) {
+        throw new Error("No authentication token found. Please login again.");
+      }
+
+      console.log("Uploading file:", file.name, "Size:", file.size);
+
+      const response = await fetch("http://localhost:5001/api/tax/process-filing", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      let extracted;
+      let result;
+      
+      if (contentType && contentType.includes('application/json')) {
+        result = await response.json();
+        extracted = result.filingData;
+      } else {
+        const text = await response.text();
+        console.error('Non-JSON response:', text.substring(0, 200));
+        throw new Error('Server returned invalid response format');
+      }
+
+      if (!response.ok) {
+        throw new Error(result?.message || result?.error || `Server error: ${response.status}`);
+      }
+      applyLangGraphResult(result, file);
+
+    } catch (error) {
+      console.error("File upload error:", error);
+      alert(`Failed to parse Form16: ${error.message}`);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const applyLangGraphResult = (result, file) => {
+
+    const extracted = result.filingData;
 
     console.log("LANGGRAPH RESULT:", result);
-    console.log("TAX ANALYSIS:", result.taxAnalysis);
-    console.log("READY TO SUBMIT:", result.readyToSubmit);
+      console.log("TAX ANALYSIS:", result.taxAnalysis);
+      console.log("READY TO SUBMIT:", result.readyToSubmit);
 
-    setTaxAnalysis(result.taxAnalysis);
-    setReadyToSubmit(result.readyToSubmit);
+      setTaxAnalysis(result.taxAnalysis);
+      setReadyToSubmit(result.readyToSubmit);
 
-    if (result.review) {
-      setReviewResult({
-        summary: result.review.summary || '',
-        issues: Array.isArray(result.review.issues) ? result.review.issues : [],
-        recommendations: Array.isArray(result.review.recommendations) ? result.review.recommendations : [],
-        confidence: typeof result.review.confidence === 'number' ? result.review.confidence : 0
-      });
-    }
-
-    console.log("FORM16 DATA EXTRACTED:", extracted);
-
-    // Add file to uploaded files list
-    const newFile = {
-      id: Date.now(),
-      name: file.name,
-      size: file.size,
-      uploadDate: new Date().toLocaleDateString(),
-      status: "processed"
-    };
-    
-    setUploadedFiles(prev => [...prev, newFile]);
-
-    // Update filing data with extracted information
-    setFilingData(prev => ({
-            ...prev,
-            personalInfo: {
-        ...prev.personalInfo,
-
-        firstName: extracted.personal?.firstName || '',
-        lastName: extracted.personal?.lastName || '',
-        pan: extracted.personal?.pan || '',
-
-        address: {
-          ...prev.personalInfo.address,
-
-          street:
-            extracted.personal?.address?.street || '',
-
-          city:
-            extracted.personal?.address?.city || '',
-
-          state:
-            extracted.personal?.address?.state || '',
-
-          pincode:
-            extracted.personal?.address?.pincode || ''
-        }
-      },
-      employment: {
-        employerName:
-          extracted.employment?.employerName || "",
-
-        employerPAN:
-          extracted.employment?.employerPAN || "",
-
-        employerTAN:
-          extracted.employment?.employerTAN || "",
-
-        assessmentYear:
-          extracted.employment?.assessmentYear || ""
-      },
-      
-      deductions: {
-        ...prev.deductions,
-        section80C: extracted.deductions?.section80C || 0,
-        section80D: extracted.deductions?.section80D || 0,
-        section80G: extracted.deductions?.section80G || 0,
-        section24: extracted.deductions?.section24 || 0,
-        section80E: extracted.deductions?.section80E || 0,
-        section80TTA: extracted.deductions?.section80TTA || 0
-      },
-      income: {
-  ...prev.income,
-
-        salary: {
-
-          basicSalary:
-            extracted.income?.basicSalary || 0,
-
-          allowances:
-            extracted.income?.allowances || 0,
-
-          perquisites:
-            extracted.income?.perquisites || 0,
-
-          profitsInLie:
-            extracted.income?.profitsInLie || 0,
-
-          total:
-            extracted.income?.grossSalary || 0,
-
-          taxableIncome:
-            extracted.income?.taxableIncome || 0,
-
-          hraExemption:
-            extracted.income?.hraExemption || 0,
-
-          standardDeduction:
-            extracted.income?.standardDeduction || 0
-        }
-      },
-      
-      taxPaid: {
-        ...prev.taxPaid,
-        tds: extracted.taxPaid?.tds || extracted.tax?.tds || 0,
-        advanceTax: extracted.taxPaid?.advanceTax || 0,
-        selfAssessment: extracted.taxPaid?.selfAssessment || 0
+      if (result.review) {
+        setReviewResult({
+          summary: result.review.summary || '',
+          issues: Array.isArray(result.review.issues) ? result.review.issues : [],
+          recommendations: Array.isArray(result.review.recommendations) ? result.review.recommendations : [],
+          confidence: typeof result.review.confidence === 'number' ? result.review.confidence : 0
+        });
       }
-    }));
 
-    setAutoFillComplete(true);
+      console.log("FORM16 DATA EXTRACTED:", extracted);
 
-    // Show success message with extracted data summary
-    alert(`Form16 parsed successfully!\n\n` +
-      `PAN: ${extracted.personal?.pan || 'N/A'}\n` +
-      `Gross Salary: ₹${(extracted.income?.grossSalary || extracted.income?.total || 0).toLocaleString()}\n` +
-      `TDS: ₹${(extracted.taxPaid?.tds || 0).toLocaleString()}\n` +
-      `80C Deduction: ₹${(extracted.deductions?.section80C || 0).toLocaleString()}`);
+      // Add file to uploaded files list
+      const newFile = {
+        id: Date.now(),
+        name: file.name,
+        size: file.size,
+        uploadDate: new Date().toLocaleDateString(),
+        status: "processed"
+      };
+      
+      setUploadedFiles(prev => [...prev, newFile]);
 
-    // Auto-advance to next step
-    setTimeout(() => {
-      setCurrentStep(2);
-    }, 1000);
+      // Update filing data with extracted information
+      setFilingData(prev => ({
+              ...prev,
+              personalInfo: {
+          ...prev.personalInfo,
 
-  } catch (error) {
-    console.error("File upload error:", error);
-    alert(`Failed to parse Form16: ${error.message}`);
-  } finally {
-    setIsUploading(false);
-  }
-};
+          firstName: extracted.personal?.firstName || '',
+          lastName: extracted.personal?.lastName || '',
+          pan: extracted.personal?.pan || '',
+
+          address: {
+            ...prev.personalInfo.address,
+
+            street:
+              extracted.personal?.address?.street || '',
+
+            city:
+              extracted.personal?.address?.city || '',
+
+            state:
+              extracted.personal?.address?.state || '',
+
+            pincode:
+              extracted.personal?.address?.pincode || ''
+          }
+        },
+        employment: {
+          employerName:
+            extracted.employment?.employerName || "",
+
+          employerPAN:
+            extracted.employment?.employerPAN || "",
+
+          employerTAN:
+            extracted.employment?.employerTAN || "",
+
+          assessmentYear:
+            extracted.employment?.assessmentYear || ""
+        },
+        
+        deductions: {
+          ...prev.deductions,
+          section80C: extracted.deductions?.section80C || 0,
+          section80D: extracted.deductions?.section80D || 0,
+          section80G: extracted.deductions?.section80G || 0,
+          section24: extracted.deductions?.section24 || 0,
+          section80E: extracted.deductions?.section80E || 0,
+          section80TTA: extracted.deductions?.section80TTA || 0
+        },
+        income: {
+    ...prev.income,
+
+          salary: {
+
+            basicSalary:
+              extracted.income?.basicSalary || 0,
+
+            allowances:
+              extracted.income?.allowances || 0,
+
+            perquisites:
+              extracted.income?.perquisites || 0,
+
+            profitsInLie:
+              extracted.income?.profitsInLie || 0,
+
+            total:
+              extracted.income?.grossSalary || 0,
+
+            taxableIncome:
+              extracted.income?.taxableIncome || 0,
+
+            hraExemption:
+              extracted.income?.hraExemption || 0,
+
+            standardDeduction:
+              extracted.income?.standardDeduction || 0
+          }
+        },
+        
+        taxPaid: {
+          ...prev.taxPaid,
+          tds: extracted.taxPaid?.tds || extracted.tax?.tds || 0,
+          advanceTax: extracted.taxPaid?.advanceTax || 0,
+          selfAssessment: extracted.taxPaid?.selfAssessment || 0
+        }
+      }));
+
+      setAutoFillComplete(true);
+
+      // Show success message with extracted data summary
+      alert(`Form16 parsed successfully!\n\n` +
+        `PAN: ${extracted.personal?.pan || 'N/A'}\n` +
+        `Gross Salary: ₹${(extracted.income?.grossSalary || extracted.income?.total || 0).toLocaleString()}\n` +
+        `TDS: ₹${(extracted.taxPaid?.tds || 0).toLocaleString()}\n` +
+        `80C Deduction: ₹${(extracted.deductions?.section80C || 0).toLocaleString()}`);
+
+      // Auto-advance to next step
+      setTimeout(() => {
+        setCurrentStep(2);
+      }, 1000);
+
+  };
 
 
   const removeFile = (fileId) => {
@@ -1233,16 +1242,66 @@ const TaxFilingPage = () => {
             }
           </p>
           
-          <label className="bg-[#3d5a80] text-white px-6 py-3 rounded-lg font-medium hover:bg-[#2d4566] transition-colors cursor-pointer inline-block border border-[#3d5a80]">
-            {uploadedFiles.length > 0 ? 'Add More Files' : 'Choose Files'}
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={handleFileUpload}
-              className="hidden"
+          <div className="flex flex-col items-center gap-4">
+
+            <label className="bg-[#3d5a80] text-white px-6 py-3 rounded-lg font-medium hover:bg-[#2d4566] transition-colors cursor-pointer inline-block border border-[#3d5a80]">
+              {uploadedFiles.length > 0 ? "Add More Files" : "Choose Files"}
+              <input
+                type="file"
+                multiple
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </label>
+
+            <div className="flex items-center w-full max-w-xs">
+              <div className="flex-grow border-t border-gray-300"></div>
+              <span className="px-3 text-sm text-gray-500">OR</span>
+              <div className="flex-grow border-t border-gray-300"></div>
+            </div>  
+
+            <GoogleDrivePicker
+              onPicked={async (file) => {
+                try {
+
+                  setIsUploading(true);
+
+                  const token = localStorage.getItem("token");
+
+                  const response = await axios.post(
+                    "http://localhost:5001/api/google-drive/download",
+                    {
+                      fileId: file.id,
+                      fileName: file.name,
+                      accessToken: file.accessToken
+                    },
+                    {
+                      headers: {
+                        Authorization: `Bearer ${token}`
+                      }
+                    }
+                  );
+
+                  applyLangGraphResult(response.data, {
+                    name: file.name,
+                    size: 0
+                  });
+
+                } catch (err) {
+
+                  console.error(err);
+                  alert("Failed to import Form-16 from Google Drive.");
+
+                } finally {
+
+                  setIsUploading(false);
+
+                }
+              }}
             />
-          </label>
+
+          </div>
           <p className="text-sm text-[#3d5a80] mt-3">Max file size: 10MB per file</p>
           {uploadedFiles.length > 0 && (
             <p className="text-sm text-green-600 mt-2 flex items-center justify-center">
