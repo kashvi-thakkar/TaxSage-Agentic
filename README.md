@@ -11,13 +11,13 @@ Most people don't trust what they typed into a tax form, and CAs spend hours re-
 ## Key features
 
 ### For users
-- **Form-16 upload → pre-filled return** (`VERIFY`: describe the extraction method actually used, e.g. LLM-based parsing / OCR, and what happens when extraction fails)
+- **Form-16 upload → pre-filled return** 
 - **Guided multi-step filing:** personal info, income, deductions, final review
 - **Dashboard:** filing status, documents and key stats in one place
 - **Document management:** upload, categorise and manage tax documents
 - **Find a CA:** search and filter registered CAs and send service requests
 - **Tax calculator:** compare estimated liability under the old vs. new regime
-- **AI help guide:** tax Q&A chatbot (`VERIFY`: model/provider, currently Gemini)
+- **AI help guide:** tax Q&A chatbot 
 
 ### For Chartered Accountants
 - **CA dashboard:** assigned clients, pending reviews, revenue stats
@@ -40,14 +40,13 @@ TaxSage-Agentic/
 
 | Layer | Technology |
 |---|---|
-| Frontend | `VERIFY` (previously React, React Router, Context API, Axios, Tailwind CSS) |
-| Backend | `VERIFY` (previously Node.js, Express.js) |
-| Database | `VERIFY` (previously MongoDB, Mongoose) |
-| Auth | `VERIFY` (previously JWT + bcrypt.js, with separate user and CA roles) |
-| AI | `VERIFY` (Google Gemini for the help guide; add the extraction model/tooling) |
+| Frontend | React, React Router, Context API, Axios, Tailwind CSS |
+| Backend | Node.js, Express.js |
+| Database | MongoDB, Mongoose |
+| Auth | JWT + bcrypt.js, with separate user and CA roles |
+| AI | Google Gemini for the help guide; add the extraction model/tooling |
 
 ## Design decisions
-
 
 - **AI output is a draft, never a decision.** Extracted values are editable and reviewed by a CA before approval.
 - **Two roles, one filing.** Users and CAs have separate auth and dashboards, but share a single filing record with a status flow (`VERIFY`: list your actual statuses).
