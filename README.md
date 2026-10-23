@@ -29,14 +29,12 @@ Most people don't trust what they typed into a tax form, and CAs spend hours re-
 
 ```
 TaxSage-Agentic/
-├── frontend/    # VERIFY: framework (old README: React + Tailwind) and entry point
-├── backend/     # VERIFY: framework(s) (old README: Node/Express + MongoDB); agent/AI service if separate
-├── research/    # VERIFY: one line on what lives here (experiments? evaluation? notebooks?)
-├── AGENTS.md    # VERIFY: one line on its purpose
+├── frontend/    
+├── backend/    
+├── research/    
+├── AGENTS.md    
 └── README.md
 ```
-
-`VERIFY`: add a short diagram or 3–4 sentences covering the request path, e.g. *Upload → extraction service → draft filing saved → user edits → sent to CA → CA review → approved.* If the "agentic" part is a distinct component (multi-step agent, tool use, orchestration), describe it here. It is the most interesting part of the repo.
 
 ## Tech stack
 
@@ -50,46 +48,28 @@ TaxSage-Agentic/
 
 ## Design decisions
 
-*Keep this section: it's what interviewers will ask about.*
 
 - **AI output is a draft, never a decision.** Extracted values are editable and reviewed by a CA before approval.
 - **Two roles, one filing.** Users and CAs have separate auth and dashboards, but share a single filing record with a status flow (`VERIFY`: list your actual statuses).
-- `VERIFY`: add 1–2 more (e.g. how you handle extraction errors, validation, or the old-vs-new regime calculation).
 
 ## Getting started
 
-### Prerequisites
-`VERIFY` versions: Node.js / Python, npm, a MongoDB Atlas cluster, API keys.
 
 ### Backend
 ```bash
 git clone https://github.com/kashvi-thakkar/TaxSage-Agentic.git
 cd TaxSage-Agentic/backend
-# VERIFY: install + run commands
 ```
 
 ### Frontend
 ```bash
 cd ../frontend
-# VERIFY: install + run commands
 ```
 
 ### Environment variables
-Create a `.env` in `backend/` (never commit it). `VERIFY` against your code; the old README listed:
-
-```env
-MONGO_URI=
-JWT_SECRET=
-PORT=
-FRONTEND_URL=
-NODE_ENV=development
-GEMINI_API_KEY=
-# Optional / planned: GOOGLE_VISION_API_KEY, CLOUDINARY_*, EMAIL_*, GOOGLE_CLIENT_*
-```
-
+Create a `.env` in `backend/` (never commit it).
 ## API overview
 
-`VERIFY` against your routes (old README listed these groups):
 
 | Area | Examples |
 |---|---|
@@ -101,8 +81,6 @@ GEMINI_API_KEY=
 
 ## Status & roadmap
 
-- **Working today:** `VERIFY` (be specific and honest)
-- **In progress / planned:** `VERIFY` (e.g. tests, deployment, richer document parsing)
 
 ## Limitations
 
